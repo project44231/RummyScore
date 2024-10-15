@@ -1,0 +1,10 @@
+Create an IOS app.
+
+app features
+
+app should have options to add new person and enter name for that person
+after new persons added, app should show all people in a table format.
+columns represent person names,
+there should be input boxes available under the person names to enter scores.
+there should be a button available to add round.
+every time add round button clicked , new input boxes will be added under each person to enter scores 

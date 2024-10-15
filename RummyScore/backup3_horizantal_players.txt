@@ -1,0 +1,277 @@
+import SwiftUI
+
+// Enum to represent score options with their corresponding values
+enum ScoreOption: String, CaseIterable, Codable {
+    case zero = "0"
+    case game = "Game"
+    case drop = "Drop"
+    case middleDrop = "M-Drop"
+    case fullCount = "Full Count"
+    case custom = "Custom"
+
+    var value: Int {
+        switch self {
+        case .zero:
+            return 0
+        case .game:
+            return 0
+        case .drop:
+            return ScoreSettings.shared.dropValue
+        case .middleDrop:
+            return ScoreSettings.shared.middleDropValue
+        case .fullCount:
+            return ScoreSettings.shared.fullCountValue
+        case .custom:
+            return -1  // Custom value needs to be set by the user
+        }
+    }
+}
+
+// Singleton for managing score settings
+class ScoreSettings: ObservableObject {
+    static let shared = ScoreSettings()
+    @Published var dropValue: Int = 25
+    @Published var middleDropValue: Int = 40
+    @Published var fullCountValue: Int = 80
+}
+
+// Struct to handle player scores
+struct PlayerScore: Codable {
+    var scoreOption: ScoreOption
+    var customValue: Int?
+}
+
+// Model for each Player
+struct Player: Identifiable, Codable {
+    var id = UUID()
+    var name: String
+    var scores: [PlayerScore]
+    
+    var totalScore: Int {
+        return scores.reduce(0) { $0 + ($1.scoreOption.value == -1 ? ($1.customValue ?? 0) : $1.scoreOption.value) }
+    }
+}
+
+// Formatter for handling number input
+let numberFormatter: NumberFormatter = {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    formatter.minimum = 0
+    return formatter
+}()
+
+// Main view of the app
+struct ContentView: View {
+    @State private var players: [Player] = []
+    @State private var newPlayerName = ""
+    @State private var roundCount = 0
+
+    @ObservedObject var scoreSettings = ScoreSettings.shared
+
+    var body: some View {
+        NavigationView {
+            VStack {
+                // Title
+                Text("GMD Rummy Score")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .padding(.top)
+
+                // Initialize score values section
+                scoreSettingsSection
+
+                // Add new player section
+                addPlayerSection
+
+                // Players and scores
+                playersScoresSection
+
+                // Add Score button
+                if !players.isEmpty {
+                    addScoreButton
+                }
+            }
+            .padding()
+            .navigationBarTitle("GMD Rummy Score", displayMode: .inline)
+        }
+    }
+
+    // MARK: - UI Components
+
+    // Score Settings Section
+    private var scoreSettingsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Initialize Score Values")
+                .font(.headline)
+                .padding(.bottom, 5)
+
+            HStack(spacing: 20) {
+                scoreSettingField(title: "Drop Value", value: $scoreSettings.dropValue)
+                scoreSettingField(title: "M-Drop Value", value: $scoreSettings.middleDropValue)
+                scoreSettingField(title: "Full Count Value", value: $scoreSettings.fullCountValue)
+            }
+        }
+        .padding()
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(10)
+    }
+
+    // Helper function for score setting fields
+    private func scoreSettingField(title: String, value: Binding<Int>) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            TextField(title, value: value, formatter: numberFormatter)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .keyboardType(.numberPad)
+        }
+        .frame(width: 100)
+    }
+
+    // Add Player Section
+    private var addPlayerSection: some View {
+        HStack {
+            TextField("Enter player's name", text: $newPlayerName)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding(.leading)
+                .autocapitalization(.words)
+
+            Button(action: addPlayer) {
+                Text("Add Player")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: 100)
+                    .padding()
+                    .background(newPlayerName.isEmpty ? Color.gray : Color.green)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+            }
+            .disabled(newPlayerName.isEmpty)
+        }
+        .padding(.vertical)
+    }
+
+    // Players and Scores Section
+    private var playersScoresSection: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                ForEach(players.indices, id: \.self) { index in
+                    playerScoreCard(for: index)
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+
+    // Player Score Card
+    private func playerScoreCard(for index: Int) -> some View {
+        VStack(alignment: .leading) {
+            HStack {
+                Text(players[index].name)
+                    .font(.headline)
+                Spacer()
+                Text("Total: \(players[index].totalScore)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.bottom, 5)
+
+            ForEach(0..<roundCount, id: \.self) { round in
+                scoreRow(for: index, round: round)
+            }
+        }
+        .padding()
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(10)
+    }
+
+    // Score Row
+    private func scoreRow(for index: Int, round: Int) -> some View {
+        HStack {
+            Text("Round \(round + 1)")
+                .font(.subheadline)
+            Spacer()
+            if players[index].scores[round].scoreOption == .custom {
+                TextField("Custom Score", value: Binding(
+                    get: { players[index].scores[round].customValue ?? 0 },
+                    set: { players[index].scores[round].customValue = max(0, $0) }
+                ), formatter: numberFormatter)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .frame(width: 80)
+            } else {
+                Picker("Select Score", selection: Binding(
+                    get: { players[index].scores[round].scoreOption },
+                    set: { players[index].scores[round].scoreOption = $0 }
+                )) {
+                    ForEach(ScoreOption.allCases, id: \.self) { option in
+                        Text(option.rawValue).tag(option)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+                .frame(width: 100)
+                .padding(.vertical, 5)
+                .background(gradientBackground(for: players[index].scores[round].scoreOption))
+                .cornerRadius(8)
+            }
+        }
+        .padding(.vertical, 5)
+    }
+
+    // Add Score Button
+    private var addScoreButton: some View {
+        Button(action: addScore) {
+            Text("Add Round")
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(8)
+        }
+        .padding(.top)
+    }
+
+    // MARK: - Functions
+
+    // Add a player function
+    private func addPlayer() {
+        let newPlayer = Player(name: newPlayerName, scores: Array(repeating: PlayerScore(scoreOption: .zero, customValue: 0), count: roundCount))
+        players.append(newPlayer)
+        newPlayerName = "" // Clear text field
+    }
+
+    // Add a score function
+    private func addScore() {
+        for index in players.indices {
+            players[index].scores.append(PlayerScore(scoreOption: .zero, customValue: 0)) // Add a new score
+        }
+        roundCount += 1
+    }
+
+    // Function to return gradient background color based on selected score option
+    private func gradientBackground(for option: ScoreOption) -> LinearGradient {
+        let colors: [Color]
+        switch option {
+        case .drop:
+            colors = [Color.gray.opacity(0.3), Color.gray.opacity(0.6)]
+        case .middleDrop:
+            colors = [Color.orange.opacity(0.3), Color.orange.opacity(0.6)]
+        case .fullCount:
+            colors = [Color.red.opacity(0.3), Color.red.opacity(0.6)]
+        case .game:
+            colors = [Color.green.opacity(0.3), Color.green.opacity(0.6)]
+        default:
+            colors = [Color.white, Color.white]
+        }
+        return LinearGradient(gradient: Gradient(colors: colors), startPoint: .top, endPoint: .bottom)
+    }
+}
+
+// Preview
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
