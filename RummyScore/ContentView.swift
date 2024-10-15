@@ -184,6 +184,7 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             isKeyboardVisible = false
         }
+        .onAppear(perform: loadGameState)
     }
 
     // MARK: - UI Components
@@ -285,6 +286,7 @@ struct ContentView: View {
         let newPlayer = Player(name: newPlayerName, scores: Array(repeating: PlayerScore(scoreOption: .zero, customValue: 0), count: roundCount))
         players.append(newPlayer)
         newPlayerName = "" // Clear text field
+        saveGameState()
     }
 
     // Add a round function
@@ -293,6 +295,7 @@ struct ContentView: View {
             players[index].scores.append(PlayerScore(scoreOption: .zero, customValue: 0))
         }
         roundCount += 1
+        saveGameState()
     }
 
     // Start New Game function
@@ -300,6 +303,7 @@ struct ContentView: View {
         gameInProgress = true
         players = []
         roundCount = 0
+        saveGameState()
     }
 
     // Modified Export Game function
@@ -341,10 +345,41 @@ struct ContentView: View {
         players.removeAll()
         roundCount = 0
         gameInProgress = false
+        saveGameState()
     }
 
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
+    public func saveGameState() {
+        let encoder = JSONEncoder()
+        if let encodedPlayers = try? encoder.encode(players) {
+            UserDefaults.standard.set(encodedPlayers, forKey: "players")
+        }
+        UserDefaults.standard.set(roundCount, forKey: "roundCount")
+        UserDefaults.standard.set(gameInProgress, forKey: "gameInProgress")
+        
+        // Save score settings
+        UserDefaults.standard.set(scoreSettings.dropValue, forKey: "dropValue")
+        UserDefaults.standard.set(scoreSettings.middleDropValue, forKey: "middleDropValue")
+        UserDefaults.standard.set(scoreSettings.fullCountValue, forKey: "fullCountValue")
+    }
+
+    private func loadGameState() {
+        if let savedPlayers = UserDefaults.standard.data(forKey: "players") {
+            let decoder = JSONDecoder()
+            if let decodedPlayers = try? decoder.decode([Player].self, from: savedPlayers) {
+                players = decodedPlayers
+            }
+        }
+        roundCount = UserDefaults.standard.integer(forKey: "roundCount")
+        gameInProgress = UserDefaults.standard.bool(forKey: "gameInProgress")
+        
+        // Load score settings
+        scoreSettings.dropValue = UserDefaults.standard.integer(forKey: "dropValue")
+        scoreSettings.middleDropValue = UserDefaults.standard.integer(forKey: "middleDropValue")
+        scoreSettings.fullCountValue = UserDefaults.standard.integer(forKey: "fullCountValue")
     }
 }
 
@@ -387,11 +422,13 @@ struct PlayerColumn: View {
     }
 
     private func scoreCell(round: Int) -> some View {
-        let playerScore = Binding(get: {
-            player.scores[round]
-        }, set: { newValue in
-            player.scores[round] = newValue
-        })
+        let playerScore = Binding(
+            get: { player.scores[round] },
+            set: { newValue in
+                player.scores[round] = newValue
+                saveGameState() // Add this line
+            }
+        )
 
         return VStack {
             if playerScore.wrappedValue.scoreOption == .custom {
@@ -453,6 +490,15 @@ struct PlayerColumn: View {
             return Color(red: 0.8, green: 0.9, blue: 1.0) // Light Blue
         case .custom:
             return Color(red: 0.9, green: 0.9, blue: 0.9) // Light Gray (previously used for Drop)
+        }
+    }
+
+    private func saveGameState() {
+        // Access the ContentView's saveGameState function
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootViewController = windowScene.windows.first?.rootViewController,
+           let contentView = rootViewController.view?.subviews.first(where: { $0 is ContentView }) as? ContentView {
+            contentView.saveGameState()
         }
     }
 }
