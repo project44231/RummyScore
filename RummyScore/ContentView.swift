@@ -6,7 +6,7 @@ enum ScoreOption: String, CaseIterable, Codable {
     case zero = "0"
     case game = "Game"
     case drop = "Drop"
-    case middleDrop = "M-Drop"
+    case middleDrop = "Middle Drop" // Changed from "M-Drop" to "Middle Drop"
     case fullCount = "Full Count"
     case custom = "Custom"
 
@@ -205,7 +205,7 @@ struct ContentView: View {
 
             HStack(spacing: 20) {
                 scoreSettingField(title: "Drop :", value: $scoreSettings.dropValue)
-                scoreSettingField(title: "M-Drop :", value: $scoreSettings.middleDropValue)
+                scoreSettingField(title: "Middle Drop :", value: $scoreSettings.middleDropValue) // Changed from "M-Drop :" to "Middle Drop :"
                 scoreSettingField(title: "Full Count :", value: $scoreSettings.fullCountValue)
             }
         }
@@ -234,7 +234,7 @@ struct ContentView: View {
                 .fontWeight(.semibold)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.green)
+                .background(Color(red: 0, green: 0.5, blue: 1)) // A bright blue color
                 .foregroundColor(.white)
                 .cornerRadius(8)
         }
@@ -274,12 +274,16 @@ struct ContentView: View {
                 }
                 .padding()
             }
-            .background(Color.white) // Add a white background
+            .background(Color.white)
             .overlay(
-                RoundedRectangle(cornerRadius: 15)
-                    .stroke(Color.blue, lineWidth: 3)
+                Group {
+                    if !players.isEmpty {
+                        RoundedRectangle(cornerRadius: 15)
+                            .stroke(Color.blue, lineWidth: 3)
+                    }
+                }
             )
-            .padding() // Add some padding around the bordered area
+            .padding()
         }
     }
 
@@ -511,7 +515,7 @@ struct PlayerColumn: View {
         case .drop:
             return "Drop (\(ScoreSettings.shared.dropValue))"
         case .middleDrop:
-            return "M-Drop (\(ScoreSettings.shared.middleDropValue))"
+            return "Middle Drop (\(ScoreSettings.shared.middleDropValue))" // Changed from "M-Drop" to "Middle Drop"
         case .fullCount:
             return "Full Count (\(ScoreSettings.shared.fullCountValue))"
         default:
