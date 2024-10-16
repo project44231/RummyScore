@@ -399,6 +399,7 @@ struct PlayerColumn: View {
     
     @ObservedObject var scoreSettings = ScoreSettings.shared
     @State private var isEditingCustomValue: [Int: Bool] = [:]
+    @FocusState private var focusedField: Int?
 
     var body: some View {
         VStack {
@@ -451,6 +452,12 @@ struct PlayerColumn: View {
                 .keyboardType(.numberPad)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .frame(width: boxWidth - 10, height: boxHeight - 10)
+                .focused($focusedField, equals: round)
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        self.focusedField = round
+                    }
+                }
             } else {
                 Menu {
                     Picker("Select Score", selection: Binding(
@@ -459,6 +466,9 @@ struct PlayerColumn: View {
                             player.scores[round].scoreOption = newValue
                             if newValue == .custom {
                                 isEditingCustomValue[round] = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    self.focusedField = round
+                                }
                             } else {
                                 player.scores[round].customValue = nil
                             }
