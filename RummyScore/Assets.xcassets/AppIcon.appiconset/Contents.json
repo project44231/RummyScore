@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "Rummy_Score_Board_App_Icon.png",
+      "filename" : "Rummy_Score_Board_Icon.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,6 +13,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Rummy_Score_Board_Icon 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -24,6 +25,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "Rummy_Score_Board_Icon 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
