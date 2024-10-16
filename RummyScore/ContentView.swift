@@ -82,7 +82,7 @@ struct ContentView: View {
 
     @ObservedObject var scoreSettings = ScoreSettings.shared
 
-    let boxWidth: CGFloat = 120
+    let boxWidth: CGFloat = 60
     let boxHeight: CGFloat = 60
 
     @State private var isKeyboardVisible = false
@@ -389,6 +389,8 @@ struct PlayerColumn: View {
     let roundCount: Int
     let boxWidth: CGFloat
     let boxHeight: CGFloat
+    
+    @ObservedObject var scoreSettings = ScoreSettings.shared
 
     var body: some View {
         VStack {
@@ -406,19 +408,14 @@ struct PlayerColumn: View {
         VStack(spacing: 5) {
             Text(player.name)
                 .font(.headline)
-                .multilineTextAlignment(.center)
-                .frame(height: boxHeight / 2)
-                .background(Color(.systemGray6))
-                .cornerRadius(5)
-            Text("Total: \(player.totalScore)")
+            Text("(\(player.totalScore))")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(height: boxHeight / 2)
-                .background(Color(.systemGray6))
-                .cornerRadius(5)
         }
         .frame(height: boxHeight)
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemGray6))
+        .cornerRadius(5)
     }
 
     private func scoreCell(round: Int) -> some View {
@@ -426,75 +423,72 @@ struct PlayerColumn: View {
             get: { player.scores[round] },
             set: { newValue in
                 player.scores[round] = newValue
-                saveGameState() // Add this line
+                saveGameState()
             }
         )
 
-        return VStack {
-            if playerScore.wrappedValue.scoreOption == .custom {
-                CustomTextField(
-                    text: Binding(
-                        get: { String(playerScore.wrappedValue.customValue ?? 0) },
-                        set: { newValue in
-                            if let intValue = Int(newValue) {
-                                var score = playerScore.wrappedValue
-                                score.customValue = max(0, intValue)
-                                playerScore.wrappedValue = score
-                            }
-                        }
-                    ),
-                    keyboardType: .numberPad,
-                    onCommit: {
-                        // You can add any additional action here if needed
-                    },
-                    textColor: UIColor(red: 0, green: 0.5, blue: 0, alpha: 1.0) // Dark green color
-                )
-                .padding(5)
-                .frame(width: boxWidth - 10, height: boxHeight)
-                .background(solidBackground(for: .custom))
-                .cornerRadius(5)
-            } else {
-                Picker("Select Score", selection: Binding(
-                    get: { playerScore.wrappedValue.scoreOption },
-                    set: { newValue in
-                        var score = playerScore.wrappedValue
-                        score.scoreOption = newValue
-                        playerScore.wrappedValue = score
-                    }
-                )) {
-                    ForEach(ScoreOption.allCases, id: \.self) { option in
-                        Text(option.rawValue).tag(option)
-                    }
+        return Menu {
+            Picker("Select Score", selection: playerScore.scoreOption) {
+                ForEach(ScoreOption.allCases, id: \.self) { option in
+                    Text(optionDisplayText(for: option)).tag(option)
                 }
-                .pickerStyle(MenuPickerStyle())
-                .padding(5)
-                .frame(width: boxWidth - 10, height: boxHeight)
+            }
+        } label: {
+            Text(optionValueText(for: playerScore.wrappedValue.scoreOption))
+                .foregroundColor(.black)
+                .frame(width: boxWidth - 20, height: boxHeight - 10)
                 .background(solidBackground(for: playerScore.wrappedValue.scoreOption))
                 .cornerRadius(5)
-                .accentColor(Color(red: 0, green: 0.5, blue: 0)) // Dark green color for picker text
-            }
+        }
+        .frame(width: boxWidth - 10, height: boxHeight)
+    }
+
+    private func optionDisplayText(for option: ScoreOption) -> String {
+        switch option {
+        case .drop:
+            return "Drop (\(ScoreSettings.shared.dropValue))"
+        case .middleDrop:
+            return "M-Drop (\(ScoreSettings.shared.middleDropValue))"
+        case .fullCount:
+            return "Full Count (\(ScoreSettings.shared.fullCountValue))"
+        default:
+            return option.rawValue
+        }
+    }
+
+    private func optionValueText(for option: ScoreOption) -> String {
+        switch option {
+        case .drop:
+            return "\(ScoreSettings.shared.dropValue)"
+        case .middleDrop:
+            return "\(ScoreSettings.shared.middleDropValue)"
+        case .fullCount:
+            return "\(ScoreSettings.shared.fullCountValue)"
+        case .zero, .game:
+            return "0"
+        case .custom:
+            return "Custom"
         }
     }
 
     private func solidBackground(for option: ScoreOption) -> Color {
         switch option {
         case .drop:
-            return Color(red: 0.9, green: 0.8, blue: 1.0) // Light Purple (previously used for Custom)
+            return Color(red: 0.9, green: 0.8, blue: 1.0)
         case .middleDrop:
-            return Color(red: 1.0, green: 0.9, blue: 0.8) // Light Orange
+            return Color(red: 1.0, green: 0.9, blue: 0.8)
         case .fullCount:
-            return Color(red: 1.0, green: 0.7, blue: 0.7) // Slightly more intense Light Red
+            return Color(red: 1.0, green: 0.7, blue: 0.7)
         case .game:
-            return Color(red: 0.8, green: 1.0, blue: 0.8) // Light Green
+            return Color(red: 0.8, green: 1.0, blue: 0.8)
         case .zero:
-            return Color(red: 0.8, green: 0.9, blue: 1.0) // Light Blue
+            return Color(red: 0.8, green: 0.9, blue: 1.0)
         case .custom:
-            return Color(red: 0.9, green: 0.9, blue: 0.9) // Light Gray (previously used for Drop)
+            return Color(red: 0.9, green: 0.9, blue: 0.9)
         }
     }
 
     private func saveGameState() {
-        // Access the ContentView's saveGameState function
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootViewController = windowScene.windows.first?.rootViewController,
            let contentView = rootViewController.view?.subviews.first(where: { $0 is ContentView }) as? ContentView {
