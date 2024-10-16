@@ -438,17 +438,19 @@ struct PlayerColumn: View {
                 .font(.headline)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
-            ZStack {
-                Circle()
-                    .fill(Color.red)
-                    .frame(width: 30, height: 30)
-                Text("\(player.totalScore)")
-                    .font(.caption)
-                    .foregroundColor(.white)
-                    .fontWeight(.bold)
+            if roundCount > 0 {
+                ZStack {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 30, height: 30)
+                    Text("\(player.totalScore)")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .fontWeight(.bold)
+                }
             }
         }
-        .frame(height: boxHeight)
+        .frame(height: roundCount > 0 ? boxHeight : boxHeight * 0.6)
         .frame(maxWidth: .infinity)
         .background(Color(.systemGray6))
         .cornerRadius(5)
