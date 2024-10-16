@@ -1,6 +1,6 @@
-# GMD Rummy Score
+# Rummy Score Card
 
-GMD Rummy Score is a SwiftUI-based iOS application designed to help players keep track of scores in the card game Rummy. This app provides an easy-to-use interface for managing multiple players, rounds, and various scoring options.
+Rummy Score Card is a SwiftUI-based iOS application designed to help players keep track of scores in the card game Rummy. This app provides an easy-to-use interface for managing multiple players, rounds, and various scoring options.
 
 ## Features
 
@@ -14,9 +14,10 @@ GMD Rummy Score is a SwiftUI-based iOS application designed to help players keep
   - Middle Drop
   - Full Count
   - Custom score entry
-- Export game results to CSV file
+- Export game results to CSV file with timestamp in EST
 - Persistent game state (app remembers scores even if closed abruptly)
-- Clean and intuitive user interface
+- Clean and intuitive user interface with consistent color scheme
+- App icon displayed in the top left corner of the screen
 
 ## How to Use
 
@@ -30,20 +31,23 @@ GMD Rummy Score is a SwiftUI-based iOS application designed to help players keep
 
 3. **Score Keeping**:
    - For each round, select a score option or enter a custom score for each player
+   - Custom scores can be entered by selecting "Custom" and typing the value
    - Tap the "+" button to add a new round
 
 4. **Export Game**:
-   - Tap the export button in the top-right corner to save the game results as a CSV file
+   - Tap the export button to save the game results as a CSV file
+   - The file will be named with the current date and time in EST format
 
 5. **End Game**:
-   - Tap the power button in the top-right corner to end the current game
+   - Start a new game to end the current one
 
 ## Technical Details
 
 - Built with SwiftUI
 - Targets iOS 14.0 and above
 - Uses `UserDefaults` for persisting game state
-- Implements custom UI components like `CustomTextField` for better user experience
+- Implements custom UI components for better user experience
+- Utilizes a consistent color scheme throughout the app
 
 ## Installation
 
