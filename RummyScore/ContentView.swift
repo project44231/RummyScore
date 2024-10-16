@@ -266,12 +266,20 @@ struct ContentView: View {
     // Players and Scores Section
     private var playersScoresSection: some View {
         ScrollView(.horizontal) {
-            HStack(spacing: 20) {
-                ForEach(players.indices, id: \.self) { index in
-                    PlayerColumn(player: $players[index], roundCount: roundCount, boxWidth: boxWidth, boxHeight: boxHeight)
+            VStack {
+                HStack(spacing: 20) {
+                    ForEach(players.indices, id: \.self) { index in
+                        PlayerColumn(player: $players[index], roundCount: roundCount, boxWidth: boxWidth, boxHeight: boxHeight)
+                    }
                 }
+                .padding()
             }
-            .padding()
+            .background(Color.white) // Add a white background
+            .overlay(
+                RoundedRectangle(cornerRadius: 15)
+                    .stroke(Color.blue, lineWidth: 3)
+            )
+            .padding() // Add some padding around the bordered area
         }
     }
 
