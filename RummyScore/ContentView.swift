@@ -49,7 +49,14 @@ struct Player: Identifiable, Codable {
     var scores: [PlayerScore]
     
     var totalScore: Int {
-        return scores.reduce(0) { $0 + ($1.scoreOption.value == -1 ? ($1.customValue ?? 0) : $1.scoreOption.value) }
+        return scores.reduce(0) { total, score in
+            switch score.scoreOption {
+            case .custom:
+                return total + (score.customValue ?? 0)
+            default:
+                return total + score.scoreOption.value
+            }
+        }
     }
 }
 
@@ -391,6 +398,7 @@ struct PlayerColumn: View {
     let boxHeight: CGFloat
     
     @ObservedObject var scoreSettings = ScoreSettings.shared
+    @State private var isEditingCustomValue: [Int: Bool] = [:]
 
     var body: some View {
         VStack {
@@ -408,9 +416,17 @@ struct PlayerColumn: View {
         VStack(spacing: 5) {
             Text(player.name)
                 .font(.headline)
-            Text("(\(player.totalScore))")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+            ZStack {
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: 30, height: 30)
+                Text("\(player.totalScore)")
+                    .font(.caption)
+                    .foregroundColor(.white)
+                    .fontWeight(.bold)
+            }
         }
         .frame(height: boxHeight)
         .frame(maxWidth: .infinity)
@@ -419,26 +435,48 @@ struct PlayerColumn: View {
     }
 
     private func scoreCell(round: Int) -> some View {
-        let playerScore = Binding(
-            get: { player.scores[round] },
-            set: { newValue in
-                player.scores[round] = newValue
-                saveGameState()
-            }
-        )
-
-        return Menu {
-            Picker("Select Score", selection: playerScore.scoreOption) {
-                ForEach(ScoreOption.allCases, id: \.self) { option in
-                    Text(optionDisplayText(for: option)).tag(option)
+        Group {
+            if player.scores[round].scoreOption == .custom && (isEditingCustomValue[round] ?? false) {
+                TextField("Custom", text: Binding(
+                    get: { "\(player.scores[round].customValue ?? 0)" },
+                    set: { newValue in
+                        if let value = Int(newValue) {
+                            player.scores[round].customValue = value
+                            saveGameState()
+                        }
+                    }
+                ), onCommit: {
+                    isEditingCustomValue[round] = false
+                })
+                .keyboardType(.numberPad)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .frame(width: boxWidth - 10, height: boxHeight - 10)
+            } else {
+                Menu {
+                    Picker("Select Score", selection: Binding(
+                        get: { player.scores[round].scoreOption },
+                        set: { newValue in
+                            player.scores[round].scoreOption = newValue
+                            if newValue == .custom {
+                                isEditingCustomValue[round] = true
+                            } else {
+                                player.scores[round].customValue = nil
+                            }
+                            saveGameState()
+                        }
+                    )) {
+                        ForEach(ScoreOption.allCases, id: \.self) { option in
+                            Text(optionDisplayText(for: option)).tag(option)
+                        }
+                    }
+                } label: {
+                    Text(optionValueText(for: player.scores[round].scoreOption, customValue: player.scores[round].customValue))
+                        .foregroundColor(.black)
+                        .frame(width: boxWidth - 20, height: boxHeight - 10)
+                        .background(solidBackground(for: player.scores[round].scoreOption))
+                        .cornerRadius(5)
                 }
             }
-        } label: {
-            Text(optionValueText(for: playerScore.wrappedValue.scoreOption))
-                .foregroundColor(.black)
-                .frame(width: boxWidth - 20, height: boxHeight - 10)
-                .background(solidBackground(for: playerScore.wrappedValue.scoreOption))
-                .cornerRadius(5)
         }
         .frame(width: boxWidth - 10, height: boxHeight)
     }
@@ -456,7 +494,7 @@ struct PlayerColumn: View {
         }
     }
 
-    private func optionValueText(for option: ScoreOption) -> String {
+    private func optionValueText(for option: ScoreOption, customValue: Int?) -> String {
         switch option {
         case .drop:
             return "\(ScoreSettings.shared.dropValue)"
@@ -467,7 +505,7 @@ struct PlayerColumn: View {
         case .zero, .game:
             return "0"
         case .custom:
-            return "Custom"
+            return "\(customValue ?? 0)"
         }
     }
 
