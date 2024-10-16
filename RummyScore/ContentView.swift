@@ -105,7 +105,7 @@ struct ContentView: View {
                 
                 VStack(spacing: 0) {
                     // Title moved to the top
-                    Text("GMD Rummy Score")
+                    Text("Rummy Score Card")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -163,15 +163,15 @@ struct ContentView: View {
             .alert(isPresented: $showingExportResult) {
                 Alert(title: Text("Export Result"), message: Text(exportResultMessage), dismissButton: .default(Text("OK")))
             }
-            .sheet(item: $documentURL) { identifiableURL in
-                DocumentPicker(url: identifiableURL.url) { success in
+            .sheet(item: $documentURL) { document in
+                DocumentPicker(url: document.url) { success in
                     if success {
                         exportResultMessage = "File exported successfully!"
                     } else {
-                        exportResultMessage = "Failed to export file."
+                        exportResultMessage = "File export was cancelled or failed."
                     }
                     showingExportResult = true
-                    documentURL = nil
+                    showingDocumentPicker = false
                 }
             }
             .alert(isPresented: $showingEndGameAlert) {
@@ -317,12 +317,19 @@ struct ContentView: View {
     private func exportGame() {
         let csvString = generateCSV()
         
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy_MM_dd_HH_mm_ss"
+        dateFormatter.timeZone = TimeZone(secondsFromGMT: -5 * 3600) // EST is GMT-5
+        let timestamp = dateFormatter.string(from: Date())
+        
+        let fileName = "RummyScoreCard_\(timestamp)_EST.csv"
+        
         let tempDir = FileManager.default.temporaryDirectory
-        let fileName = "RummyScore-\(Date().ISO8601Format()).csv"
         let tempFileURL = tempDir.appendingPathComponent(fileName)
         
         do {
             try csvString.write(to: tempFileURL, atomically: true, encoding: .utf8)
+            showingDocumentPicker = true
             documentURL = IdentifiableURL(url: tempFileURL)
         } catch {
             exportResultMessage = "Failed to create temporary file: \(error.localizedDescription)"
@@ -522,17 +529,17 @@ struct PlayerColumn: View {
     private func solidBackground(for option: ScoreOption) -> Color {
         switch option {
         case .drop:
-            return Color(red: 0.9, green: 0.8, blue: 1.0)
+            return Color(red: 0.9, green: 0.9, blue: 0.9) // Custom light gray
         case .middleDrop:
-            return Color(red: 1.0, green: 0.9, blue: 0.8)
+            return Color(red: 1.0, green: 0.9, blue: 0.8) // Light Orange
         case .fullCount:
-            return Color(red: 1.0, green: 0.7, blue: 0.7)
+            return Color(red: 1.0, green: 0.7, blue: 0.7) // Light Red
         case .game:
-            return Color(red: 0.8, green: 1.0, blue: 0.8)
+            return Color(red: 0.8, green: 1.0, blue: 0.8) // Light Green
         case .zero:
-            return Color(red: 0.8, green: 0.9, blue: 1.0)
+            return Color(red: 0.8, green: 0.9, blue: 1.0) // Light Blue
         case .custom:
-            return Color(red: 0.9, green: 0.9, blue: 0.9)
+            return Color(red: 0.9, green: 0.9, blue: 0.9) // Light Gray
         }
     }
 
@@ -551,7 +558,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
     let completion: (Bool) -> Void
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forExporting: [url])
+        let picker = UIDocumentPickerViewController(forExporting: [url], asCopy: true)
         picker.delegate = context.coordinator
         return picker
     }
@@ -570,24 +577,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
         }
 
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-            guard let selectedURL = urls.first else {
-                parent.completion(false)
-                return
-            }
-
-            do {
-                if parent.url.startAccessingSecurityScopedResource() {
-                    defer { parent.url.stopAccessingSecurityScopedResource() }
-                    let data = try Data(contentsOf: parent.url)
-                    try data.write(to: selectedURL)
-                    parent.completion(true)
-                } else {
-                    parent.completion(false)
-                }
-            } catch {
-                print("Error saving file: \(error.localizedDescription)")
-                parent.completion(false)
-            }
+            parent.completion(true)
         }
 
         func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
